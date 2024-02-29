@@ -71,13 +71,7 @@ side = "BOTH"
 [[dependencies."${mod_id}"]]
 modId = "interconnectionneoforge"
 type = "required"
-versionRange = ""
-ordering = "AFTER"
-side = "BOTH"
-[[dependencies."${mod_id}"]]
-modId = "interconnectionneoforge"
-type = "required"
-versionRange = ""
+versionRange = "*"
 ordering = "AFTER"
 side = "BOTH"
 

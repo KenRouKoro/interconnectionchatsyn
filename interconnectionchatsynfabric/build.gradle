@@ -16,6 +16,7 @@ repositories {
     // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html
     // for more information about repositories.
+    maven { url "https://mirrors.cloud.tencent.com/nexus/repository/maven-public/" }
     mavenLocal()
     mavenCentral()
 }
@@ -32,7 +33,7 @@ dependencies {
     implementation "com.foxapplication.mc:foxcore:1.0.1"
     implementation "com.foxapplication.mc:interaction-base:1.2.1"
     implementation "com.foxapplication.mc:interconnectioncommon:1.0.1"
-    modImplementation "com.foxapplication.mc:interconnectionfabric:1.0.0"
+    modImplementation "com.foxapplication.mc:interconnectionfabric:1.0.1"
     implementation "com.foxapplication.mc:interconnectionchatsyncommon:1.0.0"
 
     compileOnly 'org.projectlombok:lombok:1.18.26'

@@ -1,39 +1,45 @@
-package com.foxapplication.mc.interconnectionchatsyn.neoforge;
+package com.foxapplication.mc.interconnectionchatsyn.paper;
 
 import com.foxapplication.embed.hutool.core.thread.ThreadUtil;
 import com.foxapplication.embed.hutool.log.Log;
 import com.foxapplication.embed.hutool.log.LogFactory;
+import com.foxapplication.mc.interconnection.paper.util.NBTSendUtil;
 import com.foxapplication.mc.interconnectionchatsyn.common.InterconnectionChatSynCommon;
-import com.foxapplication.mc.interconnectionneo.forge.util.NBTSendUtil;
-import lombok.Getter;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.serializer.json.JSONComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.ServerChatEvent;
-import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import org.bukkit.craftbukkit.v1_20_R3.CraftServer;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.server.ServerLoadEvent;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.IOException;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
-@Mod(InterconnectionChatSynNeoForge.MODID)
-public class InterconnectionChatSynNeoForge {
-    public static final String MODID = "interconnectionchatsynneoforge";
+public final class InterconnectionChatSynPaper extends JavaPlugin implements Listener {
+
     private static final Log log = LogFactory.get();
-    @Getter
     private static MinecraftServer server = null;
     private static final ExecutorService executor = ThreadUtil.newSingleExecutor();
     private static CommandSourceStack sourceStack = null;
-    public InterconnectionChatSynNeoForge(IEventBus modEventBus) {
-        NeoForge.EVENT_BUS.register(this);
+
+    private static CraftServer craftServer = null;
+
+    @Override
+    public void onEnable() {
+        getServer().getPluginManager().registerEvents(this, this);
+        // Plugin startup logic
         InterconnectionChatSynCommon.Init();
         InterconnectionChatSynCommon.addHandler(message -> {
             executor.execute(() -> {
@@ -87,27 +93,54 @@ public class InterconnectionChatSynNeoForge {
                     ChatType.Bound bound = ChatType.bind(ChatType.CHAT, Objects.requireNonNull(server.getLevel(Level.OVERWORLD)).registryAccess(), Component.Serializer.fromJson(compoundTag.getString("displayName")));
                     server.execute(() -> {
                         server.getPlayerList().broadcastChatMessage(playerChatMessage, sourceStack ,bound);
+
                     });
                 }
             });
         });
     }
 
-    @SubscribeEvent
-    public void onServerStarted(ServerStartedEvent event) {
-        server = event.getServer();
-        sourceStack = server.createCommandSourceStack();
-    }
-    @SubscribeEvent
-    public void onChatMessage(ServerChatEvent event){
-        if (InterconnectionChatSynCommon.getCONFIG().isEnable()){
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putString("message", event.getMessage().getString());
-            compoundTag.putString("displayName", Component.Serializer.toJson(Objects.requireNonNull(event.getPlayer().getDisplayName())));
-            compoundTag.putUUID("UUID",event.getPlayer().getUUID());
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onServerStart(ServerLoadEvent event) {
+        if (event.getType() == ServerLoadEvent.LoadType.RELOAD) return;
 
-            NBTSendUtil.sendNBTAny("ALL","InterconnectionChatData",compoundTag);
+        if (getServer() instanceof CraftServer craftServer){
+            InterconnectionChatSynPaper.craftServer = craftServer;
+            server = craftServer.getServer();
+            sourceStack = server.createCommandSourceStack();
+        }else {
+            log.error("服务器实例获取失败。");
+            return;
+        };
+    }
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerChatEvent(AsyncChatEvent event){
+        if (InterconnectionChatSynCommon.getCONFIG().isEnable()){
+
+            if (event.getPlayer() instanceof CraftPlayer player){
+
+                CompoundTag compoundTag = new CompoundTag();
+
+                compoundTag.putString("message", PlainTextComponentSerializer.plainText().serialize(event.message()));
+
+                compoundTag.putString("displayName", JSONComponentSerializer.json().serialize((Objects.requireNonNull(event.getPlayer().displayName()))));
+                compoundTag.putUUID("UUID",player.getHandle().getUUID());
+
+                NBTSendUtil.sendNBTAny("ALL","InterconnectionChatData",compoundTag);
+
+            }else {
+
+            }
         }
     }
 
+
+    @Override
+    public void onDisable() {
+        // Plugin shutdown logic
+    }
+
+    public MinecraftServer getMinecraftServer() {
+        return server;
+    }
 }
